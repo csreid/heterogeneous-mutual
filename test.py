@@ -4,6 +4,7 @@ from IPython import embed
 from mutual import MutHook, HeterogeneousMutualLearner, QLearning
 from randomagent import RandomAgent
 import matplotlib.pyplot as plt
+import pickle
 import gym
 
 env1 = gym.make('CartPole-v1').env
@@ -52,29 +53,56 @@ evals_std = []
 evals_mut = []
 evals_target = []
 
-def run(n):
-	done = False
-	s1 = env1.reset()
-	s2 = env2.reset()
-	s3 = env3.reset()
-	for step in range(n):
-		print(step)
-		s1 = do_step(agt, env1, s1)
-		s2 = do_step(std_agt, env2, s2)
-		s3 = do_step(target_agt, env3, s3)
+def run(steps, trials):
+	for trial in range(trials):
+		done = False
+		s1 = env1.reset()
+		s2 = env2.reset()
+		s3 = env3.reset()
 
-		if (step % 100) == 0:
-			evl = agt.evaluate(eval_env, 10)
-			evals_mut.append(evl)
-			mut_est_vals.append(torch.mean(agt._q.Q(X)))
+		trial_std_est_vals = []
+		trial_mut_est_vals = []
+		trial_target_est_vals = []
 
-			evl = std_agt.evaluate(eval_env, 10)
-			evals_std.append(evl)
-			std_est_vals.append(torch.mean(std_agt.Q(X)))
+		trial_evals_std = []
+		trial_evals_mut = []
+		trial_evals_target = []
+		for step in range(steps):
+			print(step)
+			s1 = do_step(agt, env1, s1)
+			s2 = do_step(std_agt, env2, s2)
+			s3 = do_step(target_agt, env3, s3)
 
-			evl = target_agt.evaluate(eval_env, 10)
-			evals_target.append(evl)
-			target_est_vals.append(torch.mean(target_agt.Q(X)))
+			if (step % 100) == 0:
+				evl = agt.evaluate(eval_env, 10)
+				trial_evals_mut.append(evl)
+				trial_mut_est_vals.append(torch.mean(agt._q.Q(X)))
+
+				evl = std_agt.evaluate(eval_env, 10)
+				trial_evals_std.append(evl)
+				trial_std_est_vals.append(torch.mean(std_agt.Q(X)))
+
+				evl = target_agt.evaluate(eval_env, 10)
+				trial_evals_target.append(evl)
+				trial_target_est_vals.append(torch.mean(target_agt.Q(X)))
+
+		std_est_vals.append(np.mean(trial_std_est_vals))
+		mut_est_vals.append(np.mean(trial_mut_est_vals))
+		target_est_vals.append(np.mean(trial_target_est_vals))
+
+		evals_std.append(np.mean(trial_evals_std))
+		evals_mut.append(np.mean(trial_evals_mut))
+		evals_target.append(np.mean(trial_evals_target))
+
+	pickle.dump({
+		'std_est_vals': std_est_vals
+		'mut_est_vals': mut_est_vals
+		'target_est_vals': target_est_vals
+
+		'evals_std': evals_std
+		'evals_mut': evals_mut
+		'evals_target': evals_target
+	}, open('stats.pkl', 'wb'))
 
 def do_plot():
 	fig, (score_ax,est_ax,target_ax) = plt.subplots(nrows=3)
@@ -96,6 +124,6 @@ def do_plot():
 
 	plt.show()
 
-run(5000)
+run(5000, 50)
 do_plot()
 embed()
