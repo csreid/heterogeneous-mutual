@@ -1,6 +1,7 @@
 from itertools import product
 import pickle
 import time
+from IPython import embed
 
 import numpy as np
 import torch
@@ -60,6 +61,7 @@ def do_experiment(
 	trial_rs = []
 	all_mean_held_states = []
 	states = grab_states(gym.make('CartPole-v1'), 100)
+	all_loss_histories = {}
 
 	for trial in range(n_trials):
 		agts = []
@@ -67,10 +69,7 @@ def do_experiment(
 		mean_held_states = []
 
 		adp = CartPoleADP(nbins=NBINS, gamma=0.9)
-		qlrn = QLearning(
-			#target=True,
-			#target_lag=100
-		)
+		qlrn = QLearning(gamma=0.9)
 
 		if ml_type == 'share_tuples':
 			qlrn.set_mutual_agents([adp])
@@ -96,6 +95,7 @@ def do_experiment(
 
 		if do_baseline == 'both':
 			qlrn_normal = QLearning(
+				gamma=0.9
 				#target=True,
 				#target_lag=100
 			)
@@ -107,6 +107,7 @@ def do_experiment(
 
 		if do_baseline == 'q':
 			qlrn_normal = QLearning(
+				gamma=0.9
 				#target=True,
 				#target_lag=100
 			)
@@ -123,6 +124,8 @@ def do_experiment(
 				mutual_steps=mutual_steps,
 				do_target_q = True,
 				q_target_lag=100,
+				q_gamma=0.9,
+				adp_gamma=0.9,
 				adp_bins=NBINS
 			)
 			mutual.set_name('single_agent_mutual')
@@ -130,6 +133,9 @@ def do_experiment(
 
 		envs = [gym.make('CartPole-v1').env for _ in agts]
 		s_s = [env.reset() for env in envs]
+		for agt in agts:
+			if agt.name not in all_loss_histories:
+				all_loss_histories[agt.name] = []
 
 		for step in range(n_steps):
 			for idx, (agt, env, s) in enumerate(zip(agts, envs, s_s)):
@@ -146,23 +152,30 @@ def do_experiment(
 
 		trial_rs.append(rs)
 		all_mean_held_states.append(mean_held_states)
+		q_learning_agts = [agt for agt in agts if type(agt) == QLearning]
+		for agt in q_learning_agts:
+			all_loss_histories[agt.name].append(agt._loss_history)
+			print(len(all_loss_histories[agt.name]))
 
 	fname = f'./results/{time.time()}_{fname}.pickle'
 	pickle.dump({
 		'names': [agt.name for agt in agts],
 		'results': trial_rs,
-		'held_states': all_mean_held_states
+		'held_states': all_mean_held_states,
+		'losses': all_loss_histories
 	}, open(fname, 'wb'))
+
+	embed()
 
 if __name__ == '__main__':
 	states = grab_states(gym.make('CartPole-v1'), 100)
 	do_experiment(
-		fname='foo',
+		fname='test',
 		n_steps=5000,
 		mutual_steps=1500,
-		n_trials=5,
-		do_baseline='q',
-		ml_type=None,
-		do_mutual=True,
-		steps_per_eval=200
+		n_trials=20,
+		do_baseline=None,
+		ml_type='both',
+		do_mutual=False,
+		steps_per_eval=100
 	)

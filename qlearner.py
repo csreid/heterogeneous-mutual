@@ -58,6 +58,7 @@ class QLearning(Learner):
 
 		self.eps = 1.0
 		self.decay = 0.9999
+		self._loss_history = []
 
 	def set_mutual_steps(self, steps):
 		self._mutual_steps = steps
@@ -83,10 +84,15 @@ class QLearning(Learner):
 
 		X, y = self._build_dataset(n_samples)
 		y_pred = self.Q(X)
-		loss = self._base_loss_fn(y, y_pred)
+		td_loss = self._base_loss_fn(y, y_pred)
 
 		if self._steps < self._mutual_steps:
-			loss += self.compute_mutual_loss(y_pred, X)
+			mut_loss = self.compute_mutual_loss(y_pred, X)
+		else:
+			mut_loss = 0
+
+		loss = td_loss + mut_loss
+		self._loss_history.append((td_loss, mut_loss, loss))
 
 		self.opt.zero_grad()
 		loss.backward()

@@ -7,11 +7,11 @@ class Learner:
 		self._temp = 5000
 		self._last_eval = None
 		self.name = None
+		self._evals = []
 
 	def get_action(self, s, explore=True):
 		if explore:
 			return self.exploration_strategy(s)
-			#return np.random.choice(np.arange(len(ps)), p=ps)
 
 		return self.deterministic_strategy(s)
 
@@ -40,6 +40,8 @@ class Learner:
 
 		evl = np.mean(np.array(vals))
 		self._last_eval = evl
+
+		self._evals = evl
 		return np.mean(np.array(vals))
 
 	def play(self, env):
