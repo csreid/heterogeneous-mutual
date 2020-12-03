@@ -41,7 +41,7 @@ class Learner:
 		evl = np.mean(np.array(vals))
 		self._last_eval = evl
 
-		self._evals = evl
+		self._evals.append(evl)
 		return np.mean(np.array(vals))
 
 	def play(self, env):

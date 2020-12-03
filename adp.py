@@ -12,6 +12,7 @@ class CartPoleADP(Learner):
 	maxes = -mins
 
 	def __init__(self, nbins=5, gamma=0.99, delta=0.01):
+		super().__init__()
 		# F maps state-action tuples to a count of the following states
 		self.F = np.zeros(
 			# Each state

@@ -24,6 +24,7 @@ class QLearning(Learner):
 		target=False,
 		target_lag=100
 	):
+		super().__init__()
 		self._memory = Memory(1000, (4,))
 		self.Q = Sequential(
 			Linear(4, 8),
@@ -92,7 +93,7 @@ class QLearning(Learner):
 			mut_loss = 0
 
 		loss = td_loss + mut_loss
-		self._loss_history.append((td_loss, mut_loss, loss))
+		self._loss_history.append((float(td_loss), float(mut_loss), float(loss)))
 
 		self.opt.zero_grad()
 		loss.backward()
