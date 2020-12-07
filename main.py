@@ -12,8 +12,6 @@ from adp import CartPoleADP
 from mutual import MutHook, HeterogeneousMutualLearner
 import matplotlib.pyplot as plt
 
-#torch.autograd.set_detect_anomaly(True)
-
 import gym
 
 NBINS=9
@@ -68,8 +66,8 @@ def do_experiment(
 		rs = []
 		mean_held_states = []
 
-		adp = CartPoleADP(nbins=NBINS, gamma=0.9)
-		qlrn = QLearning(gamma=0.9)
+		adp = CartPoleADP(nbins=NBINS, gamma=gamma)
+		qlrn = QLearning(gamma=gamma)
 
 		if ml_type == 'share_tuples':
 			qlrn.set_mutual_agents([adp])
@@ -95,11 +93,11 @@ def do_experiment(
 
 		if do_baseline == 'both':
 			qlrn_normal = QLearning(
-				gamma=0.9
-				#target=True,
-				#target_lag=100
+				gamma=gamma
+				target=True,
+				target_lag=100
 			)
-			adp_normal = CartPoleADP(nbins=NBINS, gamma=0.9)
+			adp_normal = CartPoleADP(nbins=NBINS, gamma=gamma)
 			qlrn_normal.set_name('q_standard')
 			adp_normal.set_name('adp_standard')
 			agts.append(qlrn_normal)
@@ -107,15 +105,15 @@ def do_experiment(
 
 		if do_baseline == 'q':
 			qlrn_normal = QLearning(
-				gamma=0.9
-				#target=True,
-				#target_lag=100
+				gamma=gamma
+				target=True,
+				target_lag=100
 			)
 			qlrn_normal.set_name('q_standard')
 			agts.append(qlrn_normal)
 
 		if do_baseline == 'adp':
-			qlrn_normal = CartPoleADP(nbins=NBINS, gamma=0.9)
+			qlrn_normal = CartPoleADP(nbins=NBINS, gamma=gamma)
 			qlrn_normal.set_name('adp_standard')
 			agts.append(qlrn_normal)
 
@@ -124,8 +122,8 @@ def do_experiment(
 				mutual_steps=mutual_steps,
 				do_target_q = True,
 				q_target_lag=100,
-				q_gamma=0.9,
-				adp_gamma=0.9,
+				q_gamma=gamma,
+				adp_gamma=gamma,
 				adp_bins=NBINS
 			)
 			mutual.set_name('single_agent_mutual')
@@ -177,5 +175,6 @@ if __name__ == '__main__':
 		do_baseline=None,
 		ml_type='both',
 		do_mutual=False,
-		steps_per_eval=100
+		steps_per_eval=100,
+		gamma=0.9
 	)
