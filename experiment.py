@@ -4,6 +4,8 @@ from adp import CartPoleADP
 from mutual import MutHook, HeterogeneousMutualLearner
 import torch
 import pickle
+from multiprocessing import Pool
+import time
 
 class Experiment:
 	def __init__(self, cfg):
@@ -55,7 +57,7 @@ class Experiment:
 
 		fname = f'./results/{time.time()}{fname}.pickle'
 		pickle.dump({
-			'names': self.names,
+			'names': self.get_names(),
 			'results': self.results,
 			'config': self.cfg
 		}, open(fname, 'wb'))
@@ -69,7 +71,25 @@ class Experiment:
 
 		return s_s
 
-	def _do_trial(self):
+	def get_names(self):
+		names = []
+
+		if self.do_mutual:
+			names.append('adp_sharing_tuples')
+			names.append('q_mutual')
+
+		if self.do_standard_q:
+			names.append('q_standard')
+
+		if self.do_standard_adp:
+			names.append('adp_standard')
+
+		if self.do_hetmut:
+			names.append('single_agent_mutual')
+
+		return names
+
+	def _do_trial(self, i):
 		agts = self._build_agts()
 		envs = [gym.make(self.env_name).env for _ in agts]
 		eval_envs = [gym.make(self.env_name) for _ in agts]
@@ -89,13 +109,20 @@ class Experiment:
 				print(evals)
 				trial_evals.append(evals)
 
+		print(f'Trial {i}')
 		return trial_evals
 
-	def run(self):
-		for trial in range(self.n_trials):
-			trial_result = self._do_trial()
-			print(f'Trial {trial}')
-			self.results.append(trial_result)
+	def run(self, n_jobs=4):
+		if n_jobs == 1:
+			for trial in range(self.n_trials):
+				trial_result = self._do_trial(trial)
+				self.results.append(trial_result)
+
+		else:
+			with Pool(n_jobs) as p:
+				results = p.map(self._do_trial, range(self.n_trials))
+
+			self.results = results
 
 	def _build_agts(self):
 		agts = []
@@ -156,5 +183,8 @@ class Experiment:
 			agts.append(hetmut)
 
 		if self.names is None:
-			self.names = [agt.name for agt in agts]
+			names = [agt.name for agt in agts]
+			print(f'Setting names to {names}')
+			self.names = names
+
 		return agts

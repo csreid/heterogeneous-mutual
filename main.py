@@ -25,7 +25,7 @@ def parse_config(fname):
 	return data
 
 if __name__ == '__main__':
-	cfg = parse_config('./experiment_configs/exp_target.json')
+	cfg = parse_config('./experiment_configs/test_exp.json')
 	exp = Experiment(cfg)
 
 	exp.run()
