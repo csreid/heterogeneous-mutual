@@ -1,0 +1,20 @@
+{
+	"envName": "CartPole-v1",
+	"useTargetQ": true,
+	"QTargetLag": 100,
+	"adpBins": 9,
+	"mutual": {
+		"ADPQ": true,
+		"heterogeneous": true,
+		"mutualSteps": 1000
+	},
+	"standard": {
+		"Q": true,
+		"ADP": true
+	},
+	"trials": 50,
+	"stepsPerTrial": 5000,
+	"stepsPerEvaluation": 100,
+	"gamma": 0.9,
+	"holdOutStates": 1000
+}
