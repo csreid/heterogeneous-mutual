@@ -56,7 +56,8 @@ class Experiment:
 		fname = f'./results/{time.time()}{fname}.pickle'
 		pickle.dump({
 			'names': self.names,
-			'results': self.results
+			'results': self.results,
+			'config': self.cfg
 		}, open(fname, 'wb'))
 
 	def _get_held_states(self, n):

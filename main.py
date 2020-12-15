@@ -29,3 +29,4 @@ if __name__ == '__main__':
 	exp = Experiment(cfg)
 
 	exp.run()
+	exp.save()
