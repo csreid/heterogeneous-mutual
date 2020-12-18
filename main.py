@@ -3,6 +3,7 @@ import pickle
 import time
 from IPython import embed
 import json
+import argparse
 
 import numpy as np
 import torch
@@ -20,13 +21,19 @@ NBINS=9
 
 eval_env = gym.make('CartPole-v1')
 
+parser = argparse.ArgumentParser(
+	description='Run an experiment'
+)
+parser.add_argument('fname')
+
 def parse_config(fname):
 	data = json.load(open(fname, 'r'))
 	return data
 
 if __name__ == '__main__':
-	cfg = parse_config('./experiment_configs/test_exp.json')
+	fname = parser.parse_args().fname
+	cfg = parse_config(fname)
 	exp = Experiment(cfg)
 
 	exp.run()
-	exp.save()
+	exp.save(fname)
