@@ -22,10 +22,9 @@ class HeterogeneousMutualLearner(Learner):
 	def __init__(
 		self,
 		primary='q',
-		adp_gamma=0.99,
+		gamma=0.99,
 		adp_delta=0.01,
 		adp_bins=5,
-		q_gamma=0.99,
 		mutual_steps=1000,
 		do_target_q=False,
 		q_target_lag=100
@@ -33,12 +32,12 @@ class HeterogeneousMutualLearner(Learner):
 		self._mutual_steps = mutual_steps
 		self._steps = 0
 		self._adp = CartPoleADP(
-			gamma=adp_gamma,
+			gamma=gamma,
 			delta=adp_delta,
 			nbins=adp_bins
 		)
 		self._q = QLearning(
-			gamma=q_gamma,
+			gamma=gamma,
 			target=do_target_q,
 			target_lag=q_target_lag
 		)

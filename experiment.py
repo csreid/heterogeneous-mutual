@@ -16,6 +16,8 @@ class Experiment:
 		self.do_mutual = cfg['mutual']['ADPQ']
 		self.do_hetmut = cfg['mutual']['heterogeneous']
 		self.mutual_steps = cfg['mutual']['mutualSteps']
+		self.mutual_weight = cfg['mutual']['weight']
+		self.mutual_type = cfg['mutual']['type']
 
 		self.do_standard_q = cfg['standard']['Q']
 		self.do_standard_adp = cfg['standard']['ADP']
@@ -135,7 +137,9 @@ class Experiment:
 				gamma=self.gamma,
 				target=self.use_target_q,
 				target_lag=self.q_target_lag,
-				mutual_steps=self.mutual_steps
+				mutual_steps=self.mutual_steps,
+				mutual_loss_weight = self.mutual_weight,
+				mutual_loss_type = self.mutual_type
 			)
 
 			hook = MutHook(adp)
@@ -174,8 +178,7 @@ class Experiment:
 				mutual_steps=self.mutual_steps,
 				do_target_q=self.use_target_q,
 				q_target_lag=self.q_target_lag,
-				q_gamma=self.gamma,
-				adp_gamma=self.gamma,
+				gamma=self.gamma,
 				adp_bins=self.adp_bins
 			)
 

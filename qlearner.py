@@ -22,7 +22,9 @@ class QLearning(Learner):
 		mutual_steps=1000,
 		lr=0.01,
 		target=False,
-		target_lag=100
+		target_lag=100,
+		mutual_loss_weight=5.,
+		mutual_loss_type='proportional'
 	):
 		super().__init__()
 		self._memory = Memory(1000, (4,))
@@ -54,6 +56,8 @@ class QLearning(Learner):
 		self._mutual_hook = None
 		self._mutual_agents = []
 		self._mutual_steps = mutual_steps
+		self._mutual_type = mutual_loss_type
+		self._mutual_weight = mutual_loss_weight
 
 		self._do_mutual = True
 
@@ -66,7 +70,6 @@ class QLearning(Learner):
 
 	def _mutual_loss_weight(self):
 		return (-1 / (1 + np.e ** ((-(self._steps - self._mutual_steps))/500))) + 1
-		#return softmax(np.array([self._mutual_hook.adp._last_eval, self._last_eval]))
 
 	def compute_mutual_loss(self, y_pred, X):
 		if self._mutual_hook is None:
@@ -74,10 +77,14 @@ class QLearning(Learner):
 
 		mut, evl = self._mutual_hook(X)
 
-		if evl is None or self._last_eval is None:
-			return 5 * self._base_loss_fn(mut, y_pred)# * self._mutual_loss_weight()
+		if self._mutual_type == 'constant' or evl is None or self._last_eval is None:
+			return self._mutual_weight * self._base_loss_fn(mut, y_pred)
 
-		return (evl / self._last_eval) * self._base_loss_fn(mut, y_pred)# * self._mutual_loss_weight()
+		if self._mutual_type == 'proportional':
+			return self._mutual_weight * (evl / self._last_eval) * self._base_loss_fn(mut, y_pred)
+
+		if self._mutual_type == 'softmax':
+			return self._mutual_weight * softmax(np.array([self._last_eval, evl]))[0]
 
 	def learn(self, batch_size=32, n_samples=32):
 		if len(self._memory) < n_samples:
@@ -99,7 +106,7 @@ class QLearning(Learner):
 		loss.backward()
 		self.opt.step()
 
-		return loss.item()
+		return (loss.item(), td_loss, mut_loss)
 
 	def _build_dataset(self, n):
 		with torch.no_grad():
@@ -133,7 +140,7 @@ class QLearning(Learner):
 			sp,
 			done
 		))
-		self.learn()
+		loss = self.learn()
 		self._steps += 1
 
 		if self._target and (self._steps % self._lag) == 0:
@@ -141,6 +148,8 @@ class QLearning(Learner):
 
 		for agt in self._mutual_agents:
 			agt.handle_transition(s, a, r, sp, done)
+			
+		return loss
 
 	def get_action_vals(self, s):
 		s = self._convert_to_torch(s)
