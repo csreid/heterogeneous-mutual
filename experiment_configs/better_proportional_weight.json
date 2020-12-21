@@ -1,7 +1,7 @@
 {
 	"envName": "CartPole-v1",
-	"useTargetQ": false,
-	"QTargetLag": 0,
+	"useTargetQ": true,
+	"QTargetLag": 100,
 	"adpBins": 9,
 	"mutual": {
 		"ADPQ": true,
