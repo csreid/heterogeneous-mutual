@@ -71,20 +71,30 @@ class QLearning(Learner):
 	def _mutual_loss_weight(self):
 		return (-1 / (1 + np.e ** ((-(self._steps - self._mutual_steps))/500))) + 1
 
-	def compute_mutual_loss(self, y_pred, X):
+	def _compute_mutual_loss(self, y_pred, X):
 		if self._mutual_hook is None:
 			return 0
 
 		mut, evl = self._mutual_hook(X)
 
-		if self._mutual_type == 'constant' or evl is None or self._last_eval is None:
-			return self._mutual_weight * self._base_loss_fn(mut, y_pred)
+		return self._base_loss_fn(mut, y_pred)
+
+	def _compute_total_loss(self, td_loss, ml_loss):
+		if self._mutual_hook is None or self._steps >= self._mutual_steps:
+			return td_loss
+
+		adp_evl = self._mutual_hook.adp._last_eval
+
+		if self._mutual_type == 'constant' or adp_evl is None or self._last_eval is None:
+			return self._mutual_weight * ml_loss
 
 		if self._mutual_type == 'proportional':
-			return self._mutual_weight * (evl / self._last_eval) * self._base_loss_fn(mut, y_pred)
+			return self._mutual_weight * (adp_evl / self._last_eval) * ml_loss + td_loss
 
 		if self._mutual_type == 'softmax':
-			return self._mutual_weight * softmax(np.array([self._last_eval, evl]))[0]
+			ml_weight, td_weight = softmax(np.array([adp_evl, self._last_eval]))
+
+			return ml_weight * ml_loss + td_weight * self._last_eval
 
 	def learn(self, batch_size=32, n_samples=32):
 		if len(self._memory) < n_samples:
@@ -95,11 +105,11 @@ class QLearning(Learner):
 		td_loss = self._base_loss_fn(y, y_pred)
 
 		if self._steps < self._mutual_steps:
-			mut_loss = self.compute_mutual_loss(y_pred, X)
+			mut_loss = self._compute_mutual_loss(y_pred, X)
 		else:
 			mut_loss = 0
 
-		loss = td_loss + mut_loss
+		loss = self._compute_total_loss(td_loss, mut_loss)
 		self._loss_history.append((float(td_loss), float(mut_loss), float(loss)))
 
 		self.opt.zero_grad()

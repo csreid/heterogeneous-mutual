@@ -9,7 +9,7 @@ class MutHook:
 		self.adp = adp
 
 	def __call__(self, s_s):
-		av_s = [] #torch.zeros(len(s), 2)
+		av_s = []
 
 		for idx, s in enumerate(s_s):
 			av_s.append(self.adp.get_action_vals(s.detach().numpy()))
