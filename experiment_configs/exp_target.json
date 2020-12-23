@@ -20,6 +20,6 @@
 	"trials": 50,
 	"stepsPerTrial": 5000,
 	"stepsPerEvaluation": 100,
-	"gamma": 0.9,
+	"gamma": 0.99,
 	"holdOutStates": 1000
 }
