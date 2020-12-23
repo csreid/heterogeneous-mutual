@@ -19,6 +19,10 @@ class Experiment:
 		self.mutual_weight = cfg['mutual']['weight']
 		self.mutual_type = cfg['mutual']['type']
 
+		self.initial_eps = cfg['exploration']['initialEpsilon']
+		self.final_eps = cfg['exploration']['finalEpsilon']
+		self.decay_steps = cfg['exploration']['decaySteps']
+
 		self.do_standard_q = cfg['standard']['Q']
 		self.do_standard_adp = cfg['standard']['ADP']
 
@@ -37,7 +41,7 @@ class Experiment:
 			self.hold_out_states = cfg['holdOutStates']
 
 		if type(self.hold_out_states) == int:
-			self.held_states = self._get_held_states(self.hold_out_states)
+			self.held_states = self._get_held_states()
 
 		self.loss_history = {}
 		self.results = []
@@ -64,9 +68,10 @@ class Experiment:
 			'config': self.cfg
 		}, open(fname, 'wb'))
 
-	def _get_held_states(self, n):
+	def _get_held_states(self):
+		n = self.hold_out_states
 		env = gym.make(self.env_name)
-		s_s = torch.zeros(n, 4)
+		s_s = torch.zeros((n,) + env.observation_space.shape)
 		for idx in range(n):
 			s = torch.tensor(env.reset())
 			s_s[idx] = s
@@ -135,6 +140,9 @@ class Experiment:
 			)
 			qlrn = QLearning(
 				gamma=self.gamma,
+				initial_epsilon=self.initial_eps,
+				final_epsilon=self.final_eps,
+				epsilon_decay_steps=self.decay_steps,
 				target=self.use_target_q,
 				target_lag=self.q_target_lag,
 				mutual_steps=self.mutual_steps,
@@ -156,6 +164,9 @@ class Experiment:
 		if self.do_standard_q:
 			qlrn = QLearning(
 				gamma=self.gamma,
+				initial_epsilon=self.initial_eps,
+				final_epsilon=self.final_eps,
+				epsilon_decay_steps=self.decay_steps,
 				target=self.use_target_q,
 				target_lag=self.q_target_lag
 			)
@@ -176,6 +187,9 @@ class Experiment:
 		if self.do_hetmut:
 			hetmut = HeterogeneousMutualLearner(
 				mutual_steps=self.mutual_steps,
+				initial_epsilon=self.initial_eps,
+				final_epsilon=self.final_eps,
+				epsilon_decay_steps=self.decay_steps,
 				do_target_q=self.use_target_q,
 				q_target_lag=self.q_target_lag,
 				gamma=self.gamma,

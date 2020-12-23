@@ -27,7 +27,10 @@ class HeterogeneousMutualLearner(Learner):
 		adp_bins=5,
 		mutual_steps=1000,
 		do_target_q=False,
-		q_target_lag=100
+		q_target_lag=100,
+		initial_epsilon=1.0,
+		final_epsilon=0.01,
+		epsilon_decay_steps=5000
 	):
 		self._mutual_steps = mutual_steps
 		self._steps = 0
@@ -39,7 +42,10 @@ class HeterogeneousMutualLearner(Learner):
 		self._q = QLearning(
 			gamma=gamma,
 			target=do_target_q,
-			target_lag=q_target_lag
+			target_lag=q_target_lag,
+			initial_epsilon=initial_epsilon,
+			final_epsilon=final_epsilon,
+			epsilon_decay_steps=epsilon_decay_steps
 		)
 
 		hook = MutHook(self._adp)

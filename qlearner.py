@@ -20,6 +20,9 @@ class QLearning(Learner):
 		loss=MSELoss,
 		gamma=0.99,
 		mutual_steps=1000,
+		initial_epsilon=1.0,
+		final_epsilon=0.01,
+		epsilon_decay_steps=5000,
 		lr=0.01,
 		target=False,
 		target_lag=100,
@@ -61,8 +64,8 @@ class QLearning(Learner):
 
 		self._do_mutual = True
 
-		self.eps = 1.0
-		self.decay = 0.9999
+		self.eps = initial_epsilon
+		self.decay = (final_epsilon/initial_epsilon) ** (1 / epsilon_decay_steps)
 		self._loss_history = []
 
 	def set_mutual_steps(self, steps):

@@ -3,6 +3,11 @@
 	"useTargetQ": true,
 	"QTargetLag": 100,
 	"adpBins": 9,
+	"exploration": {
+		"initialEpsilon": 1.0,
+		"finalEpsilon": 0.01,
+		"decaySteps": 5000
+	},
 	"mutual": {
 		"ADPQ": true,
 		"heterogeneous": true,
