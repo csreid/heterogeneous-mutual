@@ -167,7 +167,6 @@ class Experiment:
 				initial_epsilon=self.initial_eps,
 				final_epsilon=self.final_eps,
 				epsilon_decay_steps=self.decay_steps,
-				target=self.use_target_q,
 				target_lag=self.q_target_lag,
 				mutual_steps=self.mutual_steps,
 				mutual_loss_weight = self.mutual_weight,
@@ -191,7 +190,6 @@ class Experiment:
 				initial_epsilon=self.initial_eps,
 				final_epsilon=self.final_eps,
 				epsilon_decay_steps=self.decay_steps,
-				target=self.use_target_q,
 				target_lag=self.q_target_lag
 			)
 
@@ -214,7 +212,6 @@ class Experiment:
 				initial_epsilon=self.initial_eps,
 				final_epsilon=self.final_eps,
 				epsilon_decay_steps=self.decay_steps,
-				do_target_q=self.use_target_q,
 				q_target_lag=self.q_target_lag,
 				gamma=self.gamma,
 				adp_bins=self.adp_bins

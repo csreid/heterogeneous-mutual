@@ -24,7 +24,6 @@ class QLearning(Learner):
 		final_epsilon=0.01,
 		epsilon_decay_steps=5000,
 		lr=0.01,
-		target=False,
 		target_lag=100,
 		mutual_loss_weight=5.,
 		mutual_loss_type='proportional'
@@ -38,17 +37,15 @@ class QLearning(Learner):
 			LeakyReLU(),
 			Linear(8,2)
 		)
+		self.target_Q = copy.deepcopy(self.Q)
 
-		if target:
-			self._target = True
-			self.target_Q = copy.deepcopy(self.Q)
-			self._lag = target_lag
-		else:
-			self._target = False
+		self._target = True
+		self._lag = target_lag
 
 		self.gamma = gamma
 
 		self.opt = opt(self.Q.parameters(), lr=lr)
+		self.target_opt = opt(self.target_Q.parameters(), lr=lr)
 		self.mut_opt = opt(self.Q.parameters(), lr=lr)
 		self._base_opt = opt
 		self._lr = lr
@@ -82,22 +79,23 @@ class QLearning(Learner):
 
 		return self._base_loss_fn(mut, y_pred)
 
-	def _compute_total_loss(self, td_loss, ml_loss):
-		if self._mutual_hook is None or self._steps >= self._mutual_steps:
-			return td_loss
+	def _learn_target(self, n=32):
+		if self._mutual_hook is None:
+			return
 
-		adp_evl = self._mutual_hook.adp._last_eval
+		if len(self._memory) < n:
+			return
 
-		if self._mutual_type == 'constant' or adp_evl is None or self._last_eval is None:
-			return self._mutual_weight * ml_loss
+		s_s, _, _, _, _ = self._memory.sample(n)
+		s_s = s_s.detach()
 
-		if self._mutual_type == 'proportional':
-			return self._mutual_weight * (adp_evl / self._last_eval) * ml_loss + td_loss
+		y, _ = self._mutual_hook(s_s)
+		y_pred = self.target_Q(s_s)
+		target_loss = self._base_loss_fn(y, y_pred)
 
-		if self._mutual_type == 'softmax':
-			ml_weight, td_weight = softmax(np.array([adp_evl, self._last_eval]))
-
-			return ml_weight * ml_loss + td_weight * self._last_eval
+		self.target_opt.zero_grad()
+		target_loss.backward()
+		self.target_opt.step()
 
 	def learn(self, batch_size=32, n_samples=32):
 		if len(self._memory) < n_samples:
@@ -105,21 +103,13 @@ class QLearning(Learner):
 
 		X, y = self._build_dataset(n_samples)
 		y_pred = self.Q(X)
-		td_loss = self._base_loss_fn(y, y_pred)
-
-		if self._steps < self._mutual_steps:
-			mut_loss = self._compute_mutual_loss(y_pred, X)
-		else:
-			mut_loss = 0
-
-		loss = self._compute_total_loss(td_loss, mut_loss)
-		self._loss_history.append((float(td_loss), float(mut_loss), float(loss)))
+		loss = self._base_loss_fn(y, y_pred)
 
 		self.opt.zero_grad()
 		loss.backward()
 		self.opt.step()
 
-		return (loss.item(), td_loss, mut_loss)
+		return loss.item()
 
 	def _build_dataset(self, n):
 		with torch.no_grad():
@@ -153,6 +143,10 @@ class QLearning(Learner):
 			sp,
 			done
 		))
+
+		if self._steps <= self._mutual_steps:
+			self._learn_target()
+
 		loss = self.learn()
 		self._steps += 1
 
