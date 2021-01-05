@@ -6,6 +6,7 @@ import torch
 import pickle
 from multiprocessing import Pool
 import time
+import numpy as np
 
 class Experiment:
 	def __init__(self, cfg):
@@ -42,10 +43,19 @@ class Experiment:
 
 		if type(self.hold_out_states) == int:
 			self.held_states = self._get_held_states()
+			self.val_history = np.zeros((
+				self._n_agents(),
+				self.n_trials,
+				int(np.floor(self.steps / self.steps_per_eval))
+			))
 
-		self.loss_history = {}
 		self.results = []
 		self.names = None
+
+		self.step = 0
+
+	def _n_agents(self):
+		return len(self.get_names())
 
 	def _do_step(self, agt, env, s):
 		a = agt.get_action(s)
@@ -55,6 +65,7 @@ class Experiment:
 		if done:
 			sp = env.reset()
 
+		self.step += 1
 		return sp
 
 	def save(self, fname=''):
@@ -103,18 +114,30 @@ class Experiment:
 		s_s = [env.reset() for env in envs]
 		trial_evals = []
 
-		for agt in agts:
-			if agt.name not in self.loss_history:
-				self.loss_history[agt.name] = []
-
 		for step in range(self.steps):
 			for idx, (agt, env, s) in enumerate(zip(agts, envs, s_s)):
 				s_s[idx] = self._do_step(agt, env, s)
 
 			if (step % self.steps_per_eval) == 0:
+				for idx, agt in enumerate(agts):
+					if self.hold_out_states is not None:
+						if isinstance(agt, QLearning):
+							val = torch.mean(agt.get_action_vals(self.held_states))
+						elif isinstance(agt, CartPoleADP):
+							av_s = []
+							for s in self.held_states:
+								av_s.append(agt.get_action_vals(s.detach().numpy()))
+							val = np.mean(av_s)
+						eval_idx = int(np.floor(step / self.steps_per_eval))
+						hist_idx = (idx, i, eval_idx)
+						self.val_history[hist_idx] = val
+
+				if self.hold_out_states is not None:
+					print(self.val_history[:, i, eval_idx])
+
 				evals = [agt.evaluate(eval_env, 20) for (agt, eval_env) in zip(agts, eval_envs)]
-				print(evals)
 				trial_evals.append(evals)
+				print(evals)
 
 		print(f'Trial {i}')
 		return trial_evals
@@ -124,6 +147,7 @@ class Experiment:
 			for trial in range(self.n_trials):
 				trial_result = self._do_trial(trial)
 				self.results.append(trial_result)
+				self.step = 0
 
 		else:
 			with Pool(n_jobs) as p:
