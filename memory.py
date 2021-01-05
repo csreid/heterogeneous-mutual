@@ -14,6 +14,26 @@ class Memory:
 	def __len__(self):
 		return min(self._counter, self.max_len)
 
+	def __iter__(self):
+		self._n = 0
+
+		return self
+
+	def __next__(self):
+		if self._n >= min(self._counter, self.max_len):
+			raise StopIteration
+
+		val = (
+			self.s_s[self._n],
+			self.a_s[self._n],
+			self.r_s[self._n],
+			self.sp_s[self._n],
+			self.done_mask[self._n]
+		)
+		self._n += 1
+
+		return val
+
 	def append(self, t):
 		i = self._counter
 		s, a, r, sp, done = t

@@ -80,8 +80,6 @@ class CartPoleADP(Learner):
 		#])
 		vals = []
 		for a in range(2):
-			idx = tuple(s) + (a,)
-		for a in range(2):
 			total=0
 			for sp, r in product(set(self._statemap[tuple(s) + (a,)]), range(2)):
 				total += self._p(s, a, r, sp) * (r + self.gamma * r * self.V[sp])
