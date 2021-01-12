@@ -164,7 +164,7 @@ class QLearning(Learner):
 
 		while (loss_delta < 0) or (prev_loss is None):
 			losses = []
-			for (s, a, r, sp, done) in self.memory:
+			for (s, a, r, sp, done) in self._memory:
 				s = s.detach().numpy()
 				y = self._mutual_hook.adp.get_action_vals(s)
 
