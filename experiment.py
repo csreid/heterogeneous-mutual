@@ -132,12 +132,9 @@ class Experiment:
 						hist_idx = (idx, i, eval_idx)
 						self.val_history[hist_idx] = val
 
-				if self.hold_out_states is not None:
-					print(self.val_history[:, i, eval_idx])
-
 				evals = [agt.evaluate(eval_env, 20) for (agt, eval_env) in zip(agts, eval_envs)]
 				trial_evals.append(evals)
-				print(evals)
+				print(f'Evals: {evals}')
 
 		print(f'Trial {i}')
 		return trial_evals

@@ -79,24 +79,6 @@ class QLearning(Learner):
 
 		return self._base_loss_fn(mut, y_pred)
 
-	def _learn_target(self, n=32):
-		if self._mutual_hook is None:
-			return
-
-		if len(self._memory) < n:
-			return
-
-		s_s, _, _, _, _ = self._memory.sample(n)
-		s_s = s_s.detach()
-
-		y, _ = self._mutual_hook(s_s)
-		y_pred = self.target_Q(s_s)
-		target_loss = self._base_loss_fn(y, y_pred)
-
-		self.target_opt.zero_grad()
-		target_loss.backward()
-		self.target_opt.step()
-
 	def learn(self, batch_size=32, n_samples=32):
 		if len(self._memory) < n_samples:
 			return 'n/a'
@@ -144,9 +126,6 @@ class QLearning(Learner):
 			done
 		))
 
-		if self._steps <= self._mutual_steps:
-			self._learn_target()
-
 		loss = self.learn()
 		self._steps += 1
 
@@ -165,8 +144,8 @@ class QLearning(Learner):
 		while (loss_delta < 0) or (prev_loss is None):
 			losses = []
 			for (s, a, r, sp, done) in self._memory:
-				s = s.detach().numpy()
-				y = self._mutual_hook.adp.get_action_vals(s)
+				s = s.detach()
+				y = torch.tensor(self._mutual_hook.adp.get_action_vals(s.numpy())).float().detach()
 
 				y_pred = self.Q(s)
 
@@ -185,7 +164,7 @@ class QLearning(Learner):
 			prev_loss = loss
 
 	def _update_target(self):
-		if self._mutual_hook is not None:
+		if self._mutual_hook is not None and self._steps <= self._mutual_steps:
 			self._update_to_mutual()
 
 		self.target_Q = copy.deepcopy(self.Q)
