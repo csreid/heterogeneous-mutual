@@ -9,16 +9,14 @@ from qlearner import QLearning
 from memory import Memory
 import gym
 
-Q = Sequential(
-	Linear(4, 8),
-	LeakyReLU(),
-	Linear(8, 8),
-	LeakyReLU(),
-	Linear(8, 2)
-)
-opt = Adam(Q.parameters())
 loss_fn = MSELoss()
 memory = Memory(1000, (4,))
+
+q_agt = QLearning()
+Q = q_agt.Q
+opt = q_agt.opt
+q_agt.opt = opt
+q_agt._memory = memory
 
 adp_agt = CartPoleADP(nbins=9, gamma=0.99, delta=0.01)
 
@@ -32,20 +30,19 @@ def get_avs(X):
 env = gym.make('CartPole-v1')
 eval_env = gym.make('CartPole-v1')
 
+held_states = torch.zeros(20, 4)
+for i in range(20):
+	s = torch.tensor(eval_env.reset())
+	held_states[i] = s
+
 done = False
 s = env.reset()
-for step in range(1010):
+for step in range(500):
 	a = adp_agt.get_action(s)
 	sp, r, done, _ = env.step(a)
 
 	adp_agt.handle_transition(s, a, r, sp, done)
-	memory.append((
-		torch.tensor(s),
-		a,
-		r,
-		torch.tensor(sp),
-		done
-	))
+	q_agt.handle_transition(s, a, r, sp, done)
 	s = sp
 
 	if done:
@@ -53,16 +50,31 @@ for step in range(1010):
 		s = env.reset()
 		done = False
 
-print(f'ADP eval: {adp_agt.evaluate(eval_env, 10)}')
-q_agt = QLearning()
-q_agt.Q = Q
-q_agt.opt = opt
-q_agt._memory = memory
+def print_info():
+	print('--===============--')
+	print(f'ADP eval: {adp_agt.evaluate(eval_env, 500)}')
+	print(f'Q eval: {q_agt.evaluate(eval_env, 500)}')
+	q_vals = Q(held_states)
+	q_vals = torch.mean(torch.max(q_vals, dim=1).values)
+	adp_vals = []
+	for state in held_states:
+		idx = tuple(adp_agt._convert_to_discrete(state.detach().numpy()))
+		val = adp_agt.V[idx]
+		adp_vals.append(val)
+	print(f'Q vals: {q_vals}')
+	print(f'ADP vals: {np.mean(adp_vals)}')
+	print('--===============--')
 
-for i in range(100):
+print_info()
+
+loss_delta = -float('Inf')
+prev_loss = None
+epochs = 0
+while (prev_loss is None) or loss_delta < 0:
 	losses = []
 	for (s, a, r, sp, done) in memory:
-		y = torch.tensor(adp_agt.get_action_vals(s.detach().numpy())).float()
+		s = s.detach()
+		y = torch.tensor(adp_agt.get_action_vals(s.detach().numpy())).float().detach()
 		y_pred = Q(s)
 
 		loss = loss_fn(y, y_pred)
@@ -73,6 +85,14 @@ for i in range(100):
 
 		losses.append(loss.detach())
 
-	print(np.mean(losses))
+	epochs += 1
 
-print(f'Q eval: {q_agt.evaluate(eval_env, 10)}')
+	loss = np.mean(losses)
+	if prev_loss is not None:
+		loss_delta = loss - prev_loss
+
+	if (i % 100) == 0:
+		print(f'{i}: {np.mean(losses)}')
+
+	prev_loss = loss
+print_info()

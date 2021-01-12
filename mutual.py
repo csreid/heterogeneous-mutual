@@ -41,7 +41,6 @@ class HeterogeneousMutualLearner(Learner):
 		)
 		self._q = QLearning(
 			gamma=gamma,
-			target=do_target_q,
 			target_lag=q_target_lag,
 			initial_epsilon=initial_epsilon,
 			final_epsilon=final_epsilon,

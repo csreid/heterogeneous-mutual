@@ -151,12 +151,44 @@ class QLearning(Learner):
 		self._steps += 1
 
 		if self._target and (self._steps % self._lag) == 0:
-			self.target_Q = copy.deepcopy(self.Q)
+			self._update_target()
 
 		for agt in self._mutual_agents:
 			agt.handle_transition(s, a, r, sp, done)
 			
 		return loss
+
+	def _update_to_mutual(self):
+		loss_delta = -float('Inf')
+		prev_loss = None
+
+		while (loss_delta < 0) or (prev_loss is None):
+			losses = []
+			for (s, a, r, sp, done) in self.memory:
+				s = s.detach().numpy()
+				y = self._mutual_hook.adp.get_action_vals(s)
+
+				y_pred = self.Q(s)
+
+				loss = self._base_loss_fn(y, y_pred)
+
+				self.opt.zero_grad()
+				loss.backward()
+				self.opt.step()
+
+				losses.append(loss.detach())
+
+			loss = np.mean(losses)
+			if prev_loss is not None:
+				loss_delta = loss - prev_loss
+
+			prev_loss = loss
+
+	def _update_target(self):
+		if self._mutual_hook is not None:
+			self._update_to_mutual()
+
+		self.target_Q = copy.deepcopy(self.Q)
 
 	def get_action_vals(self, s):
 		s = self._convert_to_torch(s)
