@@ -68,17 +68,6 @@ class QLearning(Learner):
 	def set_mutual_steps(self, steps):
 		self._mutual_steps = steps
 
-	def _mutual_loss_weight(self):
-		return (-1 / (1 + np.e ** ((-(self._steps - self._mutual_steps))/500))) + 1
-
-	def _compute_mutual_loss(self, y_pred, X):
-		if self._mutual_hook is None:
-			return 0
-
-		mut, evl = self._mutual_hook(X)
-
-		return self._base_loss_fn(mut, y_pred)
-
 	def learn(self, batch_size=32, n_samples=32):
 		if len(self._memory) < n_samples:
 			return 'n/a'

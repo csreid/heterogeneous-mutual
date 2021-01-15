@@ -11,7 +11,7 @@
 	"mutual": {
 		"ADPQ": false,
 		"heterogeneous": true,
-		"mutualSteps": 2500,
+		"mutualSteps": 1000,
 		"weight": 5.0,
 		"type": "proportional"
 	},
@@ -19,7 +19,7 @@
 		"Q": true,
 		"ADP": true
 	},
-	"trials": 20,
+	"trials": 50,
 	"stepsPerTrial": 5000,
 	"stepsPerEvaluation": 100,
 	"gamma": 0.99,
