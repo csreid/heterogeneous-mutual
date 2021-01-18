@@ -129,7 +129,6 @@ class Experiment:
 						trial_vals_i.append(val)
 
 				trial_vals.append(trial_vals_i)
-				print(trial_vals)
 				evals = [agt.evaluate(eval_env, 20) for (agt, eval_env) in zip(agts, eval_envs)]
 				trial_evals.append(evals)
 				print(f'Evals: {evals}')
