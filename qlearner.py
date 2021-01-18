@@ -39,7 +39,6 @@ class QLearning(Learner):
 		)
 		self.target_Q = copy.deepcopy(self.Q)
 
-		self._target = True
 		self._lag = target_lag
 
 		self.gamma = gamma
@@ -86,10 +85,7 @@ class QLearning(Learner):
 		with torch.no_grad():
 			s_s, a_s, r_s, sp_s, done_mask = self._memory.sample(n)
 
-			if self._target:
-				Q = self.target_Q
-			else:
-				Q = self.Q
+			Q = self.target_Q
 
 			vhat_sp_s = torch.max(Q(sp_s.float()), dim=1).values
 			vhat_sp_s[done_mask] = 0
@@ -118,12 +114,12 @@ class QLearning(Learner):
 		loss = self.learn()
 		self._steps += 1
 
-		if self._target and (self._steps % self._lag) == 0:
+		if (self._steps % self._lag) == 0:
 			self._update_target()
 
 		for agt in self._mutual_agents:
 			agt.handle_transition(s, a, r, sp, done)
-			
+
 		return loss
 
 	def _update_to_mutual(self):

@@ -76,7 +76,8 @@ class Experiment:
 		pickle.dump({
 			'names': self.get_names(),
 			'results': self.results,
-			'config': self.cfg
+			'config': self.cfg,
+			'val_history': self.val_history
 		}, open(fname, 'wb'))
 
 	def _get_held_states(self):
@@ -121,7 +122,7 @@ class Experiment:
 			if (step % self.steps_per_eval) == 0:
 				for idx, agt in enumerate(agts):
 					if self.hold_out_states is not None:
-						if isinstance(agt, QLearning):
+						if isinstance(agt, QLearning) or isinstance(agt, HeterogeneousMutualLearner):
 							val = torch.mean(agt.get_action_vals(self.held_states))
 						elif isinstance(agt, CartPoleADP):
 							av_s = []
