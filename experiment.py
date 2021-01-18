@@ -43,16 +43,9 @@ class Experiment:
 
 		if type(self.hold_out_states) == int:
 			self.held_states = self._get_held_states()
-			self.val_history = np.zeros((
-				self._n_agents(),
-				self.n_trials,
-				int(np.floor(self.steps / self.steps_per_eval))
-			))
-
+			self.val_history = []
 		self.results = []
 		self.names = None
-
-		self.step = 0
 
 	def _n_agents(self):
 		return len(self.get_names())
@@ -65,7 +58,6 @@ class Experiment:
 		if done:
 			sp = env.reset()
 
-		self.step += 1
 		return sp
 
 	def save(self, fname=''):
@@ -114,38 +106,43 @@ class Experiment:
 		eval_envs = [gym.make(self.env_name) for _ in agts]
 		s_s = [env.reset() for env in envs]
 		trial_evals = []
+		if self.hold_out_states is not None:
+			trial_vals = []
+		else:
+			trial_vals = None
 
 		for step in range(self.steps):
 			for idx, (agt, env, s) in enumerate(zip(agts, envs, s_s)):
 				s_s[idx] = self._do_step(agt, env, s)
 
 			if (step % self.steps_per_eval) == 0:
-				for idx, agt in enumerate(agts):
-					if self.hold_out_states is not None:
+				if self.hold_out_states is not None:
+					trial_vals_i = []
+					for idx, agt in enumerate(agts):
 						if isinstance(agt, QLearning) or isinstance(agt, HeterogeneousMutualLearner):
-							val = torch.mean(agt.get_action_vals(self.held_states))
+							val = float(torch.mean(agt.get_action_vals(self.held_states)))
 						elif isinstance(agt, CartPoleADP):
 							av_s = []
 							for s in self.held_states:
 								av_s.append(agt.get_action_vals(s.detach().numpy()))
 							val = np.mean(av_s)
-						eval_idx = int(np.floor(step / self.steps_per_eval))
-						hist_idx = (idx, i, eval_idx)
-						self.val_history[hist_idx] = val
+						trial_vals_i.append(val)
 
+				trial_vals.append(trial_vals_i)
+				print(trial_vals)
 				evals = [agt.evaluate(eval_env, 20) for (agt, eval_env) in zip(agts, eval_envs)]
 				trial_evals.append(evals)
 				print(f'Evals: {evals}')
 
 		print(f'Trial {i}')
-		return trial_evals
+		return trial_evals, trial_vals
 
 	def run(self, n_jobs=4):
 		if n_jobs == 1:
 			for trial in range(self.n_trials):
-				trial_result = self._do_trial(trial)
+				trial_result, trial_ests = self._do_trial(trial)
 				self.results.append(trial_result)
-				self.step = 0
+				self.val_history.append(trial_ests)
 
 		else:
 			with Pool(n_jobs) as p:
