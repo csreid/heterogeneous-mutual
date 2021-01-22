@@ -26,7 +26,8 @@ class QLearning(Learner):
 		lr=0.01,
 		target_lag=100,
 		mutual_loss_weight=5.,
-		mutual_loss_type='proportional'
+		mutual_loss_type='proportional',
+		regularization=0.
 	):
 		super().__init__()
 		self._memory = Memory(1000, (4,))
@@ -57,6 +58,7 @@ class QLearning(Learner):
 		self._mutual_steps = mutual_steps
 		self._mutual_type = mutual_loss_type
 		self._mutual_weight = mutual_loss_weight
+		self._reg = regularization
 
 		self._do_mutual = True
 
@@ -73,7 +75,7 @@ class QLearning(Learner):
 
 		X, y = self._build_dataset(n_samples)
 		y_pred = self.Q(X)
-		loss = self._base_loss_fn(y, y_pred)
+		loss = self._base_loss_fn(y, y_pred) + torch.mean(self._reg * y_pred)
 
 		self.opt.zero_grad()
 		loss.backward()

@@ -14,6 +14,8 @@ class Experiment:
 
 		self.use_target_q = cfg['useTargetQ']
 		self.q_target_lag = cfg['QTargetLag']
+		self.q_reg = cfg['regularization']
+
 		self.do_mutual = cfg['mutual']['ADPQ']
 		self.do_hetmut = cfg['mutual']['heterogeneous']
 		self.mutual_steps = cfg['mutual']['mutualSteps']
@@ -164,7 +166,8 @@ class Experiment:
 				target_lag=self.q_target_lag,
 				mutual_steps=self.mutual_steps,
 				mutual_loss_weight = self.mutual_weight,
-				mutual_loss_type = self.mutual_type
+				mutual_loss_type = self.mutual_type,
+				regularization=self.q_reg
 			)
 
 			hook = MutHook(adp)
