@@ -4,12 +4,13 @@ import copy
 import numpy as np
 from numpy import e
 import torch
-from torch.nn import Sequential, Linear, LeakyReLU, MSELoss
+from torch.nn import Sequential, Linear, LeakyReLU, MSELoss, KLDivLoss
 from torch.optim import Adam
+from torch.nn.functional import softmax
 
 from memory import Memory
 from reinforcement import Learner
-from scipy.special import softmax
+#from scipy.special import softmax
 
 np.seterr(all='raise')
 
@@ -50,6 +51,7 @@ class QLearning(Learner):
 		self._base_opt = opt
 		self._lr = lr
 		self._base_loss_fn = MSELoss()
+		self._mutual_loss_fn = KLDivLoss(reduction='batchmean')
 		self._steps = 0
 
 		self._temp = 5000
@@ -132,11 +134,12 @@ class QLearning(Learner):
 			losses = []
 			for (s, a, r, sp, done) in self._memory:
 				s = s.detach()
-				y = torch.tensor(self._mutual_hook.adp.get_action_vals(s.numpy())).float().detach()
+				y = torch.tensor(self._mutual_hook.adp.get_action_vals(s.numpy())).reshape(1, -1).float().detach()
+				y = softmax(y, dim=1)
 
-				y_pred = self.Q(s)
+				y_pred = softmax(self.Q(s).reshape(1, -1), dim=1)
 
-				loss = self._base_loss_fn(y, y_pred)
+				loss = self._mutual_loss_fn(y, y_pred)
 
 				self.opt.zero_grad()
 				loss.backward()
