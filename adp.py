@@ -66,18 +66,17 @@ class CartPoleADP(Learner):
 
 		return delta
 
+	def support(self, s):
+		s = self._convert_to_discrete(s)
+
+		v = self.visits[s]
+		t = np.sum(self.visits)
+
+		return v/t
+
 	def get_action_vals(self, s):
 		s = self._convert_to_discrete(s)
 
-		#vals = np.array([
-		#	np.sum([
-		#		# Here, `r` will only be 0 in a terminal state or 1 otherwise
-		#		# We take advantage of that to set the second term to 0 when `sp` is terminal
-		#		self._p(s, a, r, sp) * (r + self.gamma * r * self.V[sp])
-		#		for sp, r in product(set(self._statemap[s + (a,)]), range(2))
-		#	])
-		#	for a in range(2)
-		#])
 		vals = []
 		for a in range(2):
 			total=0

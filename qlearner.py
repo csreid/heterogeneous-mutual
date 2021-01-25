@@ -139,7 +139,7 @@ class QLearning(Learner):
 
 				y_pred = softmax(self.Q(s).reshape(1, -1), dim=1)
 
-				loss = self._mutual_loss_fn(y, y_pred)
+				loss = self._mutual_loss_fn(y, y_pred) * self._mutual_hook.adp.support(s)
 
 				self.opt.zero_grad()
 				loss.backward()
