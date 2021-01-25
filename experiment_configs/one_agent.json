@@ -3,7 +3,7 @@
 	"useTargetQ": true,
 	"QTargetLag": 100,
 	"adpBins": 5,
-	"regularization": 0.1,
+	"regularization": 0.0,
 	"exploration": {
 		"initialEpsilon": 1.0,
 		"finalEpsilon": 0.01,
