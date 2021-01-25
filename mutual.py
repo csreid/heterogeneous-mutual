@@ -1,8 +1,11 @@
 import torch
 import numpy as np
-from reinforcement import Learner
-from adp import CartPoleADP
-from qlearner import QLearning
+from rebar.learners.learner import Learner
+from torch.nn.functional import softmax
+from torch.nn import MSELoss, KLDivLoss
+
+from rebar.learners.qlearner import QLearner
+from rebar.learners.adp import ADP
 
 class MutHook:
 	def __init__(self, adp):
@@ -21,6 +24,8 @@ class MutHook:
 class HeterogeneousMutualLearner(Learner):
 	def __init__(
 		self,
+		action_space,
+		observation_space,
 		primary='q',
 		gamma=0.99,
 		adp_delta=0.01,
@@ -28,28 +33,33 @@ class HeterogeneousMutualLearner(Learner):
 		mutual_steps=1000,
 		do_target_q=False,
 		q_target_lag=100,
+		model_lag=100,
 		initial_epsilon=1.0,
 		final_epsilon=0.01,
 		epsilon_decay_steps=5000
 	):
 		self._mutual_steps = mutual_steps
+		self._mutual_loss_fn = KLDivLoss(reduction='batchmean')
 		self._steps = 0
-		self._adp = CartPoleADP(
+		self._adp = ADP(
+			action_space=action_space,
+			observation_space=observation_space,
+			bins=adp_bins,
 			gamma=gamma,
-			delta=adp_delta,
-			nbins=adp_bins
+			delta=adp_delta
 		)
-		self._q = QLearning(
+		self._q = QLearner(
+			action_space=action_space,
+			observation_space=observation_space,
+			Q='simple',
 			gamma=gamma,
 			target_lag=q_target_lag,
 			initial_epsilon=initial_epsilon,
 			final_epsilon=final_epsilon,
-			epsilon_decay_steps=epsilon_decay_steps
+			exploration_steps=epsilon_decay_steps
 		)
 
-		hook = MutHook(self._adp)
-		self._q.set_mutual_hook(hook)
-		self._q.set_mutual_steps(mutual_steps)
+		self.model_lag = model_lag
 
 		if primary == 'q':
 			self._primary = self._q
@@ -61,17 +71,45 @@ class HeterogeneousMutualLearner(Learner):
 	def handle_transition(self, s, a, r, sp, done):
 		self._steps += 1
 		self._q.handle_transition(s, a, r, sp, done)
-		if self._steps < self._mutual_steps:
-			self._adp.handle_transition(s, a, r, sp, done)
+
+		if self._steps < self._mutual_steps and (self._steps % self.model_lag) == 0:
+			self._update_to_model()
+
+	def _update_to_model(self):
+		loss_delta = -float('Inf')
+		prev_loss = None
+
+		while (loss_delta < 0) or (prev_loss is None):
+			losses = []
+			for (s, a, r, sp, done) in self._q._memory:
+				s = s.detach()
+				y = torch.tensor(self._adp.get_action_vals(s.numpy())).reshape(1, -1).float().detach()
+				y = softmax(y, dim=1)
+
+				y_pred = softmax(self._q.Q(s).reshape(1, -1), dim=1)
+
+				loss = self._mutual_loss_fn(y, y_pred)# TODO: add support to rebar * self._adp.support(s)
+
+				self._q.opt.zero_grad()
+				loss.backward()
+				self._q.opt.step()
+
+				losses.append(loss.detach())
+
+			loss = np.mean(losses)
+			if prev_loss is not None:
+				loss_delta = loss - prev_loss
+
+			prev_loss = loss
 
 	def get_action_vals(self, s):
 		return self._primary.get_action_vals(s)
 
-	def exploration_strategy(self, s):
-		return self._primary.exploration_strategy(s)
+	def exploration_policy(self, s):
+		return self._primary.exploration_policy(s)
 
-	def deterministic_strategy(self, s):
-		return self._primary.deterministic_strategy(s)
+	def deterministic_policy(self, s):
+		return self._primary.deterministic_policy(s)
 
 	def evaluate(self, env, n):
 		adp_eval = self._adp.evaluate(env, n)

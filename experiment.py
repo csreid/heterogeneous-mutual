@@ -1,12 +1,18 @@
 import gym
-from qlearner import QLearning
-from adp import CartPoleADP
+from gym import ObservationWrapper
 from mutual import MutHook, HeterogeneousMutualLearner
 import torch
 import pickle
 from multiprocessing import Pool
 import time
 import numpy as np
+
+from rebar.learners.qlearner import QLearner
+from rebar.learners.adp import ADP
+
+class TorchWrapper(ObservationWrapper):
+	def observation(self, obs):
+		return torch.tensor(obs).float()
 
 class Experiment:
 	def __init__(self, cfg):
@@ -36,6 +42,8 @@ class Experiment:
 		self.adp_bins = cfg['adpBins']
 
 		self.env_name = cfg['envName']
+		self.standin_env = gym.make(self.env_name)
+
 		if type(cfg['holdOutStates']) == bool and cfg['holdOutStates']:
 			self.hold_out_states = 100
 		elif type(cfg['holdOutStates']) == bool:
@@ -53,7 +61,7 @@ class Experiment:
 		return len(self.get_names())
 
 	def _do_step(self, agt, env, s):
-		a = agt.get_action(s)
+		a = int(agt.get_action(s))
 		sp, r, done, _ = env.step(a)
 		agt.handle_transition(s, a, r, sp, done)
 
@@ -102,10 +110,20 @@ class Experiment:
 
 		return names
 
+	def _build_env_for_agt(self, agt, is_eval=False):
+		env = gym.make(self.env_name)
+		if not is_eval:
+			env = env.env
+
+		if not isinstance(agt, ADP):
+			env = TorchWrapper(env)
+
+		return env
+
 	def _do_trial(self, i):
 		agts = self._build_agts()
-		envs = [gym.make(self.env_name).env for _ in agts]
-		eval_envs = [gym.make(self.env_name) for _ in agts]
+		envs = [self._build_env_for_agt(agt, False) for agt in agts]
+		eval_envs = [self._build_env_for_agt(agt, True) for agt in agts]
 		s_s = [env.reset() for env in envs]
 		trial_evals = []
 		if self.hold_out_states is not None:
@@ -121,9 +139,9 @@ class Experiment:
 				if self.hold_out_states is not None:
 					trial_vals_i = []
 					for idx, agt in enumerate(agts):
-						if isinstance(agt, QLearning) or isinstance(agt, HeterogeneousMutualLearner):
+						if isinstance(agt, QLearner) or isinstance(agt, HeterogeneousMutualLearner):
 							val = float(torch.mean(agt.get_action_vals(self.held_states)))
-						elif isinstance(agt, CartPoleADP):
+						elif isinstance(agt, ADP):
 							av_s = []
 							for s in self.held_states:
 								av_s.append(agt.get_action_vals(s.detach().numpy()))
@@ -154,11 +172,16 @@ class Experiment:
 	def _build_agts(self):
 		agts = []
 		if self.do_mutual:
-			adp = CartPoleADP(
+			adp = ADP(
+				action_space=self.standin_env.action_space,
+				observation_space=self.standin_env.observation_space,
 				nbins=self.adp_bins,
 				gamma=self.gamma
 			)
 			qlrn = QLearning(
+				action_space=self.standin_env.action_space,
+				observation_space=self.standin_env.observation_space,
+				Q='simple',
 				gamma=self.gamma,
 				initial_epsilon=self.initial_eps,
 				final_epsilon=self.final_eps,
@@ -182,11 +205,14 @@ class Experiment:
 			agts.append(qlrn)
 
 		if self.do_standard_q:
-			qlrn = QLearning(
+			qlrn = QLearner(
+				action_space=self.standin_env.action_space,
+				observation_space=self.standin_env.observation_space,
+				Q='simple',
 				gamma=self.gamma,
 				initial_epsilon=self.initial_eps,
 				final_epsilon=self.final_eps,
-				epsilon_decay_steps=self.decay_steps,
+				exploration_steps=self.decay_steps,
 				target_lag=self.q_target_lag
 			)
 
@@ -194,9 +220,12 @@ class Experiment:
 			agts.append(qlrn)
 
 		if self.do_standard_adp:
-			adp = CartPoleADP(
-				nbins=self.adp_bins,
-				gamma=self.gamma
+			adp = ADP(
+				action_space=self.standin_env.action_space,
+				observation_space=self.standin_env.observation_space,
+				bins=self.adp_bins,
+				gamma=self.gamma,
+				delta=0.01
 			)
 
 			adp.set_name('adp_standard')
@@ -205,6 +234,8 @@ class Experiment:
 
 		if self.do_hetmut:
 			hetmut = HeterogeneousMutualLearner(
+				action_space=self.standin_env.action_space,
+				observation_space=self.standin_env.observation_space,
 				mutual_steps=self.mutual_steps,
 				initial_epsilon=self.initial_eps,
 				final_epsilon=self.final_eps,

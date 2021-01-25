@@ -5,21 +5,7 @@ import json
 import argparse
 import os
 
-import numpy as np
-import torch
-
-from memory import Memory
-from qlearner import QLearning
-from adp import CartPoleADP
-from mutual import MutHook, HeterogeneousMutualLearner
 from experiment import Experiment
-import matplotlib.pyplot as plt
-
-import gym
-
-NBINS=9
-
-eval_env = gym.make('CartPole-v1')
 
 parser = argparse.ArgumentParser(
 	description='Run an experiment'
