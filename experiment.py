@@ -137,8 +137,11 @@ class Experiment:
 				s_s[idx] = self._do_step(agt, env, s)
 
 			if (step % self.steps_per_eval) == 0:
+				evals = [agt.evaluate(eval_env, 20) for (agt, eval_env) in zip(agts, eval_envs)]
+				trial_evals.append(evals)
+				print(f'Evals: {evals}')
+
 				if self.hold_out_states is not None:
-					trial_vals_i = []
 					for idx, agt in enumerate(agts):
 						if isinstance(agt, QLearner) or isinstance(agt, HeterogeneousMutualLearner):
 							val = float(torch.mean(agt.get_action_vals(self.held_states)))
@@ -147,20 +150,14 @@ class Experiment:
 							for s in self.held_states:
 								av_s.append(agt.get_action_vals(s.detach().numpy()))
 							val = np.mean(av_s)
-						trial_vals_i.append(val)
-
-				trial_vals.append(trial_vals_i)
-				evals = [agt.evaluate(eval_env, 20) for (agt, eval_env) in zip(agts, eval_envs)]
-				trial_evals.append(evals)
-				print(f'Evals: {evals}')
 
 		print(f'Trial {i}')
-		return trial_evals, trial_vals
+		return trial_evals
 
 	def run(self, n_jobs=4):
 		if n_jobs == 1:
 			for trial in range(self.n_trials):
-				trial_result, trial_ests = self._do_trial(trial)
+				trial_result = self._do_trial(trial)
 				self.results.append(trial_result)
 
 		else:
