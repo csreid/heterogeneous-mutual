@@ -53,7 +53,6 @@ class Experiment:
 
 		if type(self.hold_out_states) == int:
 			self.held_states = self._get_held_states()
-			self.val_history = []
 		self.results = []
 		self.names = None
 
@@ -79,7 +78,6 @@ class Experiment:
 			'names': self.get_names(),
 			'results': self.results,
 			'config': self.cfg,
-			'val_history': self.val_history
 		}, open(fname, 'wb'))
 
 	def _get_held_states(self):
@@ -161,7 +159,6 @@ class Experiment:
 			for trial in range(self.n_trials):
 				trial_result, trial_ests = self._do_trial(trial)
 				self.results.append(trial_result)
-				#self.val_history.append(trial_ests)
 
 		else:
 			with Pool(n_jobs) as p:
