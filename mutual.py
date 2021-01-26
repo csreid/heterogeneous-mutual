@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from rebar.learners.learner import Learner
-from torch.nn.functional import softmax
+from torch.nn.functional import softmax, cosine_similarity
 from torch.nn import MSELoss, KLDivLoss
 
 from rebar.learners.qlearner import QLearner
@@ -108,7 +108,7 @@ class HeterogeneousMutualLearner(Learner):
 
 				y_pred = softmax(self._q.Q(s).reshape(1, -1), dim=1)
 
-				loss = self._mutual_loss_fn(y, y_pred)
+				loss = self._mutual_loss_fn(y, y_pred) * cosine_similarity(y, y_pred, dim=1)
 
 				self._q.opt.zero_grad()
 				loss.backward()
