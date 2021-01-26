@@ -161,7 +161,7 @@ class Experiment:
 			for trial in range(self.n_trials):
 				trial_result, trial_ests = self._do_trial(trial)
 				self.results.append(trial_result)
-				self.val_history.append(trial_ests)
+				#self.val_history.append(trial_ests)
 
 		else:
 			with Pool(n_jobs) as p:
