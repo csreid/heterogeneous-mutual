@@ -29,7 +29,7 @@ class HeterogeneousMutualLearner(Learner):
 		primary='q',
 		gamma=0.99,
 		adp_delta=0.01,
-		adp_bins=5,
+		adp_bins=7,
 		mutual_steps=1000,
 		do_target_q=False,
 		q_target_lag=100,
@@ -70,10 +70,30 @@ class HeterogeneousMutualLearner(Learner):
 
 	def handle_transition(self, s, a, r, sp, done):
 		self._steps += 1
+		if self._steps < self._mutual_steps:
+			self._handle_mutual(s)
+
 		self._q.handle_transition(s, a, r, sp, done)
 
-		if self._steps < self._mutual_steps and (self._steps % self.model_lag) == 0:
-			self._update_to_model()
+	def _handle_mutual(self, s):
+		q_greedy = self._q.exploitation_policy(s)
+		adp_greedy = self._adp.exploitation_policy(s)
+
+		if q_greedy == adp_greedy:
+			return
+
+		data = self._adp.sample_state(s, 64)
+		y_pred = softmax(self._q.Q(torch.tensor(data).float()), dim=1)
+		y = []
+		for d in data:
+			y.append(self._adp.get_action_vals(d))
+
+		y = softmax(torch.tensor(y).float(), dim=1)
+		loss = self._mutual_loss_fn(y, y_pred)
+
+		self._q.opt.zero_grad()
+		loss.backward()
+		self._q.opt.step()
 
 	def _update_to_model(self):
 		loss_delta = -float('Inf')
@@ -88,7 +108,7 @@ class HeterogeneousMutualLearner(Learner):
 
 				y_pred = softmax(self._q.Q(s).reshape(1, -1), dim=1)
 
-				loss = self._mutual_loss_fn(y, y_pred)# TODO: add support to rebar * self._adp.support(s)
+				loss = self._mutual_loss_fn(y, y_pred)
 
 				self._q.opt.zero_grad()
 				loss.backward()
@@ -108,8 +128,8 @@ class HeterogeneousMutualLearner(Learner):
 	def exploration_policy(self, s):
 		return self._primary.exploration_policy(s)
 
-	def deterministic_policy(self, s):
-		return self._primary.deterministic_policy(s)
+	def exploitation_policy(self, s):
+		return self._primary.exploitation_policy(s)
 
 	def evaluate(self, env, n):
 		adp_eval = self._adp.evaluate(env, n)
