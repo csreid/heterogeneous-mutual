@@ -43,6 +43,9 @@ class Experiment:
 
 		self.env_name = cfg['envName']
 		self.standin_env = gym.make(self.env_name)
+		extremes = np.array([-4.8, -4, -0.418, -4, -4])
+		self.standin_env.observation_space.low = extremes
+		self.standin_env.observation_space.high = -extremes
 
 		if type(cfg['holdOutStates']) == bool and cfg['holdOutStates']:
 			self.hold_out_states = 100
