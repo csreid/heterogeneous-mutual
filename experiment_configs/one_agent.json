@@ -2,7 +2,7 @@
 	"envName": "CartPole-v1",
 	"useTargetQ": true,
 	"QTargetLag": 100,
-	"adpBins": 9,
+	"adpBins": 7,
 	"regularization": 0.0,
 	"exploration": {
 		"initialEpsilon": 1.0,
@@ -12,7 +12,7 @@
 	"mutual": {
 		"ADPQ": false,
 		"heterogeneous": true,
-		"mutualSteps": 750,
+		"mutualSteps": 1500,
 		"weight": 5.0,
 		"type": "proportional"
 	},

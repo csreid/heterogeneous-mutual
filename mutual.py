@@ -90,7 +90,7 @@ class HeterogeneousMutualLearner(Learner):
 			y.append(self._adp.get_action_vals(d))
 
 		y = softmax(torch.tensor(y).float(), dim=1)
-		loss = self._mutual_loss_fn(y, y_pred)
+		loss = self._mutual_loss_fn(y, y_pred) * torch.mean(cosine_similarity(y, y_pred, dim=1))
 
 		self._q.opt.zero_grad()
 		loss.backward()
