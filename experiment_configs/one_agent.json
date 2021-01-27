@@ -12,7 +12,7 @@
 	"mutual": {
 		"ADPQ": false,
 		"heterogeneous": true,
-		"mutualSteps": 5000,
+		"mutualSteps": 2500,
 		"weight": 5.0,
 		"type": "proportional"
 	},
