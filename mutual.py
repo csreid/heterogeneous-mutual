@@ -84,17 +84,18 @@ class HeterogeneousMutualLearner(Learner):
 			return
 
 		data = self._adp.sample_state(s, 64)
-		y_pred = softmax(self._q.Q(torch.tensor(data).float()), dim=1)
 		y = []
 		for d in data:
 			y.append(self._adp.get_action_vals(d))
-
 		y = softmax(torch.tensor(y).float(), dim=1)
-		loss = self._mutual_loss_fn(y, y_pred) * torch.mean(cosine_similarity(y, y_pred, dim=1))
 
-		self._q.opt.zero_grad()
-		loss.backward()
-		self._q.opt.step()
+		for it in range(5):
+			y_pred = softmax(self._q.Q(torch.tensor(data).float()), dim=1)
+			loss = self._mutual_loss_fn(y, y_pred) * torch.mean(cosine_similarity(y, y_pred, dim=1))
+
+			self._q.opt.zero_grad()
+			loss.backward()
+			self._q.opt.step()
 
 	def _update_to_model(self):
 		loss_delta = -float('Inf')
