@@ -74,6 +74,7 @@ class HeterogeneousMutualLearner(Learner):
 			self._handle_mutual(s)
 
 		self._q.handle_transition(s, a, r, sp, done)
+		self._adp.handle_transition(s, a, r, sp, done)
 
 	def _handle_mutual(self, s):
 		q_greedy = self._q.exploitation_policy(s)
