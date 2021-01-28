@@ -90,40 +90,17 @@ class HeterogeneousMutualLearner(Learner):
 			y.append(self._adp.get_action_vals(d))
 		y = softmax(torch.tensor(y).float(), dim=1)
 
-		for it in range(5):
-			y_pred = softmax(self._q.Q(torch.tensor(data).float()), dim=1)
-			loss = self._mutual_loss_fn(y, y_pred) * torch.mean(cosine_similarity(y, y_pred, dim=1))
+		#y_pred = softmax(self._q.Q(torch.tensor(data).float()), dim=1)
+		y_pred = softmax(self._q.Q(s), dim=1)
 
-			self._q.opt.zero_grad()
-			loss.backward()
-			self._q.opt.step()
+		l = self._mutual_loss_fn(y, y_pred.repeat(64, 1))
+		l_weight = torch.mean(cosine_similarity(torch.tensor(data), s.repeat(64, 1), dim=1))
 
-	def _update_to_model(self):
-		loss_delta = -float('Inf')
-		prev_loss = None
+		loss = l * l_weight
 
-		while (loss_delta < 0) or (prev_loss is None):
-			losses = []
-			for (s, a, r, sp, done) in self._q._memory:
-				s = s.detach()
-				y = torch.tensor(self._adp.get_action_vals(s.numpy())).reshape(1, -1).float().detach()
-				y = softmax(y, dim=1)
-
-				y_pred = softmax(self._q.Q(s).reshape(1, -1), dim=1)
-
-				loss = self._mutual_loss_fn(y, y_pred) * cosine_similarity(y, y_pred, dim=1)
-
-				self._q.opt.zero_grad()
-				loss.backward()
-				self._q.opt.step()
-
-				losses.append(loss.detach())
-
-			loss = np.mean(losses)
-			if prev_loss is not None:
-				loss_delta = loss - prev_loss
-
-			prev_loss = loss
+		self._q.opt.zero_grad()
+		loss.backward()
+		self._q.opt.step()
 
 	def get_action_vals(self, s):
 		return self._primary.get_action_vals(s)
