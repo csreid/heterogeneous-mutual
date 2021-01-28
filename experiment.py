@@ -179,6 +179,7 @@ class Experiment:
 				action_space=self.standin_env.action_space,
 				observation_space=self.standin_env.observation_space,
 				Q='simple',
+				memory_len=1000,
 				gamma=self.gamma,
 				initial_epsilon=self.initial_eps,
 				final_epsilon=self.final_eps,
@@ -206,6 +207,10 @@ class Experiment:
 				action_space=self.standin_env.action_space,
 				observation_space=self.standin_env.observation_space,
 				Q='simple',
+				opt_args={
+					'lr': 0.01
+				},
+				memory_len=1000,
 				gamma=self.gamma,
 				initial_epsilon=self.initial_eps,
 				final_epsilon=self.final_eps,
