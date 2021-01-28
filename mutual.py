@@ -53,6 +53,7 @@ class HeterogeneousMutualLearner(Learner):
 			observation_space=observation_space,
 			Q='simple',
 			gamma=gamma,
+			memory_len=1000,
 			target_lag=q_target_lag,
 			initial_epsilon=initial_epsilon,
 			final_epsilon=final_epsilon,
