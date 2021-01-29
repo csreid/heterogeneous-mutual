@@ -93,11 +93,10 @@ class HeterogeneousMutualLearner(Learner):
 			y.append(self._adp.get_action_vals(d))
 		y = softmax(torch.tensor(y).float(), dim=1)
 
-		#y_pred = softmax(self._q.Q(torch.tensor(data).float()), dim=1)
 		y_pred = softmax(self._q.Q(s), dim=1)
 
 		l = self._mutual_loss_fn(y, y_pred.repeat(64, 1))
-		l_weight = torch.mean(cosine_similarity(torch.tensor(data), s.repeat(64, 1), dim=1))
+		l_weight = torch.sum(cosine_similarity(torch.tensor(data), s.repeat(64, 1), dim=1))
 
 		loss = l * l_weight
 
