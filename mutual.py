@@ -52,6 +52,9 @@ class HeterogeneousMutualLearner(Learner):
 			action_space=action_space,
 			observation_space=observation_space,
 			Q='simple',
+			opt_args={
+				'lr': 0.01
+			},
 			gamma=gamma,
 			memory_len=1000,
 			target_lag=q_target_lag,
