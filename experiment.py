@@ -173,7 +173,8 @@ class Experiment:
 				action_space=self.standin_env.action_space,
 				observation_space=self.standin_env.observation_space,
 				nbins=self.adp_bins,
-				gamma=self.gamma
+				gamma=self.gamma,
+				delta=0.01
 			)
 			qlrn = QLearning(
 				action_space=self.standin_env.action_space,
