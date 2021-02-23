@@ -83,7 +83,7 @@ class HeterogeneousMutualLearner(Learner):
 	def _handle_mutual(self, s):
 		q_greedy = self._q.exploitation_policy(s)
 		adp_greedy = self._adp.exploitation_policy(s)
-		#adp_confidence = self._adp.confidence(s)
+		adp_confidence = self._adp.confidence(s)
 
 		if q_greedy == adp_greedy:
 			return
