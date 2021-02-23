@@ -83,7 +83,7 @@ class HeterogeneousMutualLearner(Learner):
 	def _handle_mutual(self, s):
 		q_greedy = self._q.exploitation_policy(s)
 		adp_greedy = self._adp.exploitation_policy(s)
-		adp_confidence = self._adp.confidence(s)
+		#adp_confidence = self._adp.confidence(s)
 
 		if q_greedy == adp_greedy:
 			return
@@ -99,7 +99,7 @@ class HeterogeneousMutualLearner(Learner):
 		l = self._mutual_loss_fn(y, y_pred.repeat(64, 1))
 		l_weight = torch.sum(cosine_similarity(torch.tensor(data), s.repeat(64, 1), dim=1))
 
-		loss = l * torch.sqrt(l_weight * adp_confidence)
+		loss = l * l_weight #adp_confidence)
 
 		self._q.opt.zero_grad()
 		loss.backward()
