@@ -39,7 +39,7 @@ class HeterogeneousMutualLearner(Learner):
 		epsilon_decay_steps=5000
 	):
 		self._mutual_steps = mutual_steps
-		self._mutual_loss_fn = KLDivLoss(reduction='batchmean')
+		self._mutual_loss_fn = KLDivLoss(reduction='sum')
 		self._steps = 0
 		self._adp = ADP(
 			action_space=action_space,
@@ -92,16 +92,16 @@ class HeterogeneousMutualLearner(Learner):
 		if q_greedy == adp_greedy:
 			return 0.
 
-		data = self._adp.sample_state(s, 64)
+		data = self._adp.sample_state(s, 1)
 		y = []
 		for d in data:
 			y.append(self._adp.get_action_vals(d))
-		y = softmax(torch.tensor(y).float(), dim=1)
+		y = log_softmax(torch.tensor(y).float(), dim=1)
 
-		y_pred = log_softmax(self._q.Q(s), dim=1)
+		y_pred = softmax(self._q.Q(s), dim=1)
 
-		l = self._mutual_loss_fn(y, y_pred.repeat(64, 1))
-		l_weight = torch.sum(cosine_similarity(torch.tensor(data), s.repeat(64, 1), dim=1))
+		l = self._mutual_loss_fn(y, y_pred)
+		l_weight = torch.mean(cosine_similarity(torch.tensor(data), s.unsqueeze(0), dim=1))
 
 		loss = l * l_weight
 
