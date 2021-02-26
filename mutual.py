@@ -72,10 +72,14 @@ class HeterogeneousMutualLearner(Learner):
 		else:
 			raise Exception('Invalid option')
 
+		self.disagreement_losses = []
+
 	def handle_transition(self, s, a, r, sp, done):
 		self._steps += 1
 		if self._steps < self._mutual_steps:
-			self._handle_mutual(s)
+			self.disagreement_losses.append(
+				self._handle_mutual(s)
+			)
 
 		self._q.handle_transition(s, a, r, sp, done)
 		self._adp.handle_transition(s, a, r, sp, done)
@@ -86,7 +90,7 @@ class HeterogeneousMutualLearner(Learner):
 		adp_confidence = self._adp.confidence(s)
 
 		if q_greedy == adp_greedy:
-			return
+			return 0.
 
 		data = self._adp.sample_state(s, 64)
 		y = []
@@ -96,14 +100,16 @@ class HeterogeneousMutualLearner(Learner):
 
 		y_pred = softmax(self._q.Q(s), dim=1)
 
-		l = self._mutual_loss_fn(y, y_pred.repeat(64, 1))
+		l = torch.abs(self._mutual_loss_fn(y_pred.repeat(64, 1), y))
 		l_weight = torch.sum(cosine_similarity(torch.tensor(data), s.repeat(64, 1), dim=1))
 
-		loss = l * l_weight #adp_confidence)
+		loss = l * l_weight
 
 		self._q.opt.zero_grad()
 		loss.backward()
 		self._q.opt.step()
+
+		return float(loss)
 
 	def get_action_vals(self, s):
 		return self._primary.get_action_vals(s)
